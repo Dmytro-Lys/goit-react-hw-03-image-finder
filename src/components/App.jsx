@@ -1,58 +1,90 @@
 import css from "./App.module.css"
-import ContactForm from "./ContactForm";
-import { ContactList } from "./ContactList"
-import {Filter} from './Filter'
+import { Searchbar } from "./searchbar/Searchbar"
+import { ImageGallery } from './imagegallery/ImageGallery'
+import { Loader } from "./loader/Loader";
+import { Button } from "./button/Button"
+import { Modal} from "./modal/Modal"
 import { Component } from "react";
 import { nanoid } from "nanoid";
 import Notiflix from 'notiflix';
 import 'notiflix/src/notiflix.css';
-import {loadPhoneBook, savePhoneBook} from '../service/localstorage'
+import {getImages} from '../service/api'
 
-class App extends Component{
- state = {
-  contacts: [],
-  filter: ''
+class App extends Component {
+  state = {
+    images: [],
+    page: 1,
+    querry: '',
+    maxPage: 0,
+    isLoading: false,
+    showImage: {largeImageURL: "", tags: "" },
+    isShowModal: false
+  }
+   
+
+    handleChange = e => {
+      const { name, value } = e.target;
+      this.setState({ [name]: value.trim() });
   }
   
-  componentDidMount() {
-     this.setState({contacts: loadPhoneBook()})
+   handleSubmit = e => {
+      e.preventDefault()
+     const { querry } = this.state
+     if (!querry.trim()) return Notiflix.Notify.failure(`Fill the search field`);
+      this.resetSearch()
+    }
+  
+  
+  resetSearch = () => this.setState({images: [], page: 1, maxPage: 0, isLoading: true })
+    
+   
+  loadMore = () => {
+    this.setState(prev => {
+      return {page: prev.page + 1, isLoading: true}
+    })
   }
 
-  componentDidUpdate(prevProps, prevState) {
-    const prevContacts = prevState.contacts
-    const thisContacts = this.state.contacts
-    if ((prevContacts.length || thisContacts.length) && (prevContacts !== thisContacts))  savePhoneBook(thisContacts)
+  onError = err => Notiflix.Notify.failure(err.message)
+
+  async componentDidUpdate() {
+     const {querry, page, maxPage, isLoading, images} = this.state
+    if (isLoading)  {
+      try {
+         const data = await getImages(querry, page);
+        if (!data.hits.length) throw new Error("Sorry, there are no images matching your search query. Please try again.");
+        const imagesPage = this.generateGalleryItems(data.hits)
+        this.setState({ images: [...images, ...imagesPage] })
+        if (maxPage === 0) this.setState({ maxPage: Math.ceil(data.totalHits / 12) })
+      } catch (error) {
+        this.onError(error)
+      } finally {
+        this.setState({ isLoading: false});
+      }
+    }
   }
 
-  addContact = contact => {
-    if (this.findContact(contact.name)) return  Notiflix.Notify.failure(`${contact.name} is already in contacts`); //alert(`${contact.name} is already in contacts`)
-    return this.setState(prev => {
-      return { contacts: [ ...prev.contacts, {id: nanoid(), ...contact }]  }
-    }) || true
+  generateGalleryItems = data => data.map(item => this.createGalleryItem(item))
+
+  createGalleryItem = ({ webformatURL, tags, largeImageURL }) => {
+     return {id: nanoid(), webformatURL, tags, largeImageURL}
   }
   
-  filterChange = e => {
-    this.setState({filter: e.target.value})
-  }
+  imageClick = imageOptions =>  this.setState({showImage: imageOptions, isShowModal: true})
 
-  filterContacts = () => this.state.contacts.filter(contact => contact.name.toLowerCase().includes(this.state.filter.toLowerCase()))
-
-  findContact = name => this.state.contacts.find(contact => contact.name.toLowerCase() === name.toLowerCase())
-
-  delContact = id => {this.setState(prev => {return {contacts: prev.contacts.filter(contact => contact.id !== id)}})}
+  closeModal = () => this.setState({ isShowModal: false })
   
   render() {
+    const { querry, page, maxPage, isLoading, images, isShowModal, showImage } = this.state
     return (
-      <div className={css.container}>
-        <h1 className={css.title}>Phonebook</h1>
-        <ContactForm onSubmit={values => this.addContact(values)}/>
-
-        <h2 className={css.title}>Contacts</h2>
-        <Filter filter={this.state.filter} handleChange={this.filterChange}/>
-        {this.state.contacts && <ContactList contacts={this.filterContacts()} onDel={this.delContact}/>}
-      </div>
-    )
-  }
+       <div className={css.App}>
+        <Searchbar querry={querry} onChange={this.handleChange} onSubmit={this.handleSubmit} />
+         {images.length > 0 && <ImageGallery images={images} onClick={this.imageClick} />}
+         <Loader render={isLoading} />
+        {page < maxPage && <Button onClick={this.loadMore} />}
+        {isShowModal && <Modal imageOptions={showImage} onClick={this.closeModal}/>}
+       </div>
+     )
+   }
   
 }
 
