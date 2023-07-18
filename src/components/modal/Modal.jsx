@@ -4,8 +4,8 @@ import PropTypes from "prop-types"
 export const Modal = ({imageOptions, onClick }) => {
     const { largeImageURL, tags } = imageOptions
     return (
-        <div class={css.Overlay} onClick={onClick}>
-           <div class={css.Modal}>
+        <div className={css.Overlay} onClick={onClick}>
+           <div className={css.Modal}>
               <img src={largeImageURL} alt={tags} />
            </div>
         </div>
