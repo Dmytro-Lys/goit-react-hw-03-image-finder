@@ -20,6 +20,7 @@ class App extends Component {
     isLoading: false,
     showImage: { largeImageURL: "", tags: "" },
     refModal: React.createRef(),
+    refLastElem: React.createRef(),
     isShowModal: false
   }
    
@@ -47,10 +48,12 @@ class App extends Component {
 
   onError = err => Notiflix.Notify.failure(err.message)
 
-  async componentDidUpdate() {
+  async componentDidUpdate(prevProps, prevState) {
    
-    const { querry, page, maxPage, isLoading, images, isShowModal, refModal } = this.state
+    const { querry, page, maxPage, isLoading, images, isShowModal, refModal, refLastElem } = this.state
+    // set focus to Modal for onKeyDown
     if (isShowModal) refModal.current.focus()
+    // fetching new images
     if (isLoading)  {
       try {
          const data = await getImages(querry, page);
@@ -61,16 +64,18 @@ class App extends Component {
       } catch (error) {
         this.onError(error)
       } finally {
-        this.setState({ isLoading: false});
+        this.setState({ isLoading: false });
       }
     }
+    // scroll
+    const prevImages = prevState.images
+    if (images.length>0 && prevImages.length !== images.length) refLastElem.current.scrollIntoView({ behavior: 'smooth' })
   }
 
-  generateGalleryItems = data => data.map(item => this.createGalleryItem(item))
+  generateGalleryItems = data => data.map(({ webformatURL, tags, largeImageURL }) => {
+    return { id: nanoid(), webformatURL, tags, largeImageURL }
+  })
 
-  createGalleryItem = ({ webformatURL, tags, largeImageURL }) => {
-     return {id: nanoid(), webformatURL, tags, largeImageURL}
-  }
   
   imageClick = ({ target: { dataset: { large }, alt } }) => {
     if (!large) return
@@ -87,14 +92,14 @@ class App extends Component {
   handleKeyDown = e => {
     if (e.key === "Escape") this.closeModal()
   }
+  
  
-   
   render() {
-    const { querry, page, maxPage, isLoading, images, isShowModal, showImage, refModal } = this.state
+    const { querry, page, maxPage, isLoading, images, isShowModal, showImage, refModal, refLastElem } = this.state
     return (
        <div className={css.App}>
         <Searchbar querry={querry} onChange={this.handleChange} onSubmit={this.handleSubmit}/>
-         {images.length > 0 && <ImageGallery images={images} onClick={this.imageClick}/>}
+        {images.length > 0 && <ImageGallery images={images} onClick={this.imageClick} refLastElem={refLastElem} />}
          <Loader render={isLoading} />
         {page < maxPage && <Button onClick={this.loadMore} />}
         {isShowModal && <Modal imageOptions={showImage} refModal={refModal} onClick={this.modalClick} onKeyDown={this.handleKeyDown} />}

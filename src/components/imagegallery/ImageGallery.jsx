@@ -2,12 +2,13 @@ import css from './ImageGallery.module.css'
 import { ImageGalleryItem } from "../imagegalleryitem/ImageGalleryItem"
 import PropTypes from "prop-types"
 
-export const ImageGallery = ({images, onClick}) => {
+export const ImageGallery = ({images, onClick, refLastElem}) => {
     return (
         <ul className={css.ImageGallery} onClick={onClick}>
             {images.map(item => {
               return <ImageGalleryItem key={item.id} dataItem={item}/>
-          })}
+            })}
+            <li ref={refLastElem}></li>
         </ul>
     )
 }
