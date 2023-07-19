@@ -1,7 +1,7 @@
 import css from './Searchbar.module.css'
 import PropTypes from "prop-types"
 
-export const Searchbar = ({ querry, onChange, onSubmit }) => {
+export const Searchbar = ({ querry, onChange, onSubmit}) => {
     return (
             <header className={css.Searchbar}>
               <form onSubmit={onSubmit} className={css.SearchForm}>

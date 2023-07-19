@@ -1,6 +1,6 @@
-import css from "./App.module.css"
-import { Searchbar } from "./searchbar/Searchbar"
-import { ImageGallery } from './imagegallery/ImageGallery'
+import css from "./App.module.css";
+import { Searchbar } from "./searchbar/Searchbar";
+import { ImageGallery } from './imagegallery/ImageGallery';
 import { Loader } from "./loader/Loader";
 import { Button } from "./button/Button"
 import { Modal} from "./modal/Modal"
@@ -8,7 +8,8 @@ import { Component } from "react";
 import { nanoid } from "nanoid";
 import Notiflix from 'notiflix';
 import 'notiflix/src/notiflix.css';
-import {getImages} from '../service/api'
+import { getImages } from '../service/api';
+import React from 'react';
 
 class App extends Component {
   state = {
@@ -17,7 +18,8 @@ class App extends Component {
     querry: '',
     maxPage: 0,
     isLoading: false,
-    showImage: {largeImageURL: "", tags: "" },
+    showImage: { largeImageURL: "", tags: "" },
+    refModal: React.createRef(),
     isShowModal: false
   }
    
@@ -34,8 +36,7 @@ class App extends Component {
       this.resetSearch()
     }
   
-  
-  resetSearch = () => this.setState({images: [], page: 1, maxPage: 0, isLoading: true })
+   resetSearch = () => this.setState({images: [], page: 1, maxPage: 0, isLoading: true })
     
    
   loadMore = () => {
@@ -47,7 +48,9 @@ class App extends Component {
   onError = err => Notiflix.Notify.failure(err.message)
 
   async componentDidUpdate() {
-     const {querry, page, maxPage, isLoading, images} = this.state
+   
+    const { querry, page, maxPage, isLoading, images, isShowModal, refModal } = this.state
+    if (isShowModal) refModal.current.focus()
     if (isLoading)  {
       try {
          const data = await getImages(querry, page);
@@ -69,19 +72,32 @@ class App extends Component {
      return {id: nanoid(), webformatURL, tags, largeImageURL}
   }
   
-  imageClick = imageOptions =>  this.setState({showImage: imageOptions, isShowModal: true})
+  imageClick = ({ target: { dataset: { large }, alt } }) => {
+    if (!large) return
+    const imageOptions = { largeImageURL: large, tags: alt }
+    this.setState({ showImage: imageOptions, isShowModal: true })
+  }
 
   closeModal = () => this.setState({ isShowModal: false })
-  
+
+  modalClick = (e) => {
+    if (!e.target.src)  this.closeModal()
+  }
+
+  handleKeyDown = e => {
+    if (e.key === "Escape") this.closeModal()
+  }
+ 
+   
   render() {
-    const { querry, page, maxPage, isLoading, images, isShowModal, showImage } = this.state
+    const { querry, page, maxPage, isLoading, images, isShowModal, showImage, refModal } = this.state
     return (
        <div className={css.App}>
-        <Searchbar querry={querry} onChange={this.handleChange} onSubmit={this.handleSubmit} />
-         {images.length > 0 && <ImageGallery images={images} onClick={this.imageClick} />}
+        <Searchbar querry={querry} onChange={this.handleChange} onSubmit={this.handleSubmit}/>
+         {images.length > 0 && <ImageGallery images={images} onClick={this.imageClick}/>}
          <Loader render={isLoading} />
         {page < maxPage && <Button onClick={this.loadMore} />}
-        {isShowModal && <Modal imageOptions={showImage} onClick={this.closeModal}/>}
+        {isShowModal && <Modal imageOptions={showImage} refModal={refModal} onClick={this.modalClick} onKeyDown={this.handleKeyDown} />}
        </div>
      )
    }

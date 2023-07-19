@@ -4,9 +4,9 @@ import PropTypes from "prop-types"
 
 export const ImageGallery = ({images, onClick}) => {
     return (
-        <ul className={css.ImageGallery}>
+        <ul className={css.ImageGallery} onClick={onClick}>
             {images.map(item => {
-              return <ImageGalleryItem key={item.id} dataItem={item} onClick={onClick}/>
+              return <ImageGalleryItem key={item.id} dataItem={item}/>
           })}
         </ul>
     )
